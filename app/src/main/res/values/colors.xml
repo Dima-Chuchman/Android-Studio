@@ -2,4 +2,7 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="dice_bg">#FFFFFFFF</color>
+    <color name="dice_stroke">#FF222222</color>
+    <color name="dice_pip">#FF222222</color>
 </resources>

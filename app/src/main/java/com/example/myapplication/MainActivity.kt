@@ -8,35 +8,46 @@ import com.example.myapplication.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val viewModel: TimerViewModel by viewModels()
+    private val viewModel: DiceViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Підписка на оновлення секунд таймера
-        viewModel.timerLiveData.observe(this) { seconds ->
-            binding.tvTimer.text = "$seconds с"
-        }
+        val diceImageViews = listOf(
+            binding.dice1,
+            binding.dice2,
+            binding.dice3,
+            binding.dice4,
+            binding.dice5
+        )
 
-        // Підписка на стан роботи таймера (блокування кнопки Старт під час відліку)
-        viewModel.isTimerRunning.observe(this) { isRunning ->
-            binding.btnStart.isEnabled = !isRunning
-        }
-
-        binding.btnStart.setOnClickListener {
-            val inputSeconds = binding.etSeconds.text.toString().trim().toLongOrNull()
-            val duration = if (inputSeconds != null && inputSeconds > 0L) {
-                inputSeconds
-            } else {
-                TimerModel.DEFAULT_DURATION_SECONDS
+        viewModel.diceValues.observe(this) { values ->
+            values.forEachIndexed { index, dieValue ->
+                if (index < diceImageViews.size) {
+                    diceImageViews[index].setImageResource(getDiceDrawableRes(dieValue))
+                }
             }
-            viewModel.startTimer(duration)
         }
 
-        binding.btnReset.setOnClickListener {
-            viewModel.resetTimer()
+        viewModel.isRolling.observe(this) { isRolling ->
+            binding.btnRoll.isEnabled = !isRolling
+        }
+
+        binding.btnRoll.setOnClickListener {
+            viewModel.rollDice()
+        }
+    }
+
+    private fun getDiceDrawableRes(value: Int): Int {
+        return when (value) {
+            1 -> R.drawable.dice_1
+            2 -> R.drawable.dice_2
+            3 -> R.drawable.dice_3
+            4 -> R.drawable.dice_4
+            5 -> R.drawable.dice_5
+            else -> R.drawable.dice_6
         }
     }
 }

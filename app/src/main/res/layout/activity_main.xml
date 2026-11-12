@@ -6,45 +6,61 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
-        android:id="@+id/tvTimer"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:text="30 с"
-        android:textSize="48sp"
-        android:textStyle="bold" />
-
-    <EditText
-        android:id="@+id/etSeconds"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:hint="Введіть час у секундах (за замовчуванням 30)"
-        android:inputType="number"
-        android:maxLength="4" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
         android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnStart"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="Старт" />
+        <ImageView
+            android:id="@+id/dice1"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_margin="8dp"
+            android:src="@drawable/dice_1" />
 
-        <Button
-            android:id="@+id/btnReset"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="Скидання" />
+        <ImageView
+            android:id="@+id/dice2"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_margin="8dp"
+            android:src="@drawable/dice_1" />
+
+        <ImageView
+            android:id="@+id/dice3"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_margin="8dp"
+            android:src="@drawable/dice_1" />
     </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/dice4"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_margin="8dp"
+            android:src="@drawable/dice_1" />
+
+        <ImageView
+            android:id="@+id/dice5"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_margin="8dp"
+            android:src="@drawable/dice_1" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnRoll"
+        android:layout_width="200dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="36dp"
+        android:text="ROLL"
+        android:textSize="18sp"
+        android:textStyle="bold" />
 
 </LinearLayout>

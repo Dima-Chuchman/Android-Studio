@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="@color/dice_bg"
+        android:strokeColor="@color/dice_stroke"
+        android:strokeWidth="4"
+        android:pathData="M16,4 L84,4 C90.6,4 96,9.4 96,16 L96,84 C96,90.6 90.6,96 84,96 L16,96 C9.4,96 4,90.6 4,84 L4,16 C4,9.4 9.4,4 16,4 Z" />
+    <path
+        android:fillColor="@color/dice_pip"
+        android:pathData="M19,28 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M63,28 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M41,50 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M19,72 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M63,72 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+</vector>
