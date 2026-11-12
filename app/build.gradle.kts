@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.constraintlayout)
     implementation("com.jakewharton.timber:timber:5.0.1")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
