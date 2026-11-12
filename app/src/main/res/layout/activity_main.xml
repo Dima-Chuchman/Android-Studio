@@ -6,10 +6,17 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <Button
-        android:id="@+id/btnCount"
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Натисни мене" />
+        android:layout_marginBottom="16dp"
+        android:text="Головний екран (MainActivity)"
+        android:textSize="20sp" />
+
+    <Button
+        android:id="@+id/btnOpenSecond"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Відкрити SecondActivity" />
 
 </LinearLayout>
