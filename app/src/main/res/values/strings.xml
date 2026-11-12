@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hint_first_number">Введіть перше число</string>
+    <string name="hint_second_number">Введіть друге число</string>
+    <string name="btn_add">+</string>
+    <string name="btn_subtract">-</string>
+    <string name="btn_multiply">*</string>
+    <string name="btn_divide">/</string>
+    <string name="btn_clear">Очистити</string>
+    <string name="result_default">Результат:</string>
+</resources>
