@@ -77,7 +77,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             result.toString()
         }
-
         tvResult.text = "Результат: $formattedResult"
     }
 }

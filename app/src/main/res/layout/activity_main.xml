@@ -65,6 +65,7 @@
             android:text="@string/btn_divide" />
     </LinearLayout>
 
+
     <Button
         android:id="@+id/btnClear"
         android:layout_width="match_parent"
