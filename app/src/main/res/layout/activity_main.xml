@@ -7,16 +7,44 @@
     android:padding="24dp">
 
     <TextView
+        android:id="@+id/tvTimer"
         android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:text="30 с"
+        android:textSize="48sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etSeconds"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:text="Головний екран (MainActivity)"
-        android:textSize="20sp" />
+        android:hint="Введіть час у секундах (за замовчуванням 30)"
+        android:inputType="number"
+        android:maxLength="4" />
 
-    <Button
-        android:id="@+id/btnOpenSecond"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Відкрити SecondActivity" />
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="Старт" />
+
+        <Button
+            android:id="@+id/btnReset"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="Скидання" />
+    </LinearLayout>
 
 </LinearLayout>

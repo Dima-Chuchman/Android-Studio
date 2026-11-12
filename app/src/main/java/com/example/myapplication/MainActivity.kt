@@ -1,23 +1,42 @@
 package com.example.myapplication
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import timber.log.Timber
+import com.example.myapplication.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
+    private val viewModel: TimerViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        UserTracker.register(this)
-        Timber.d("Зареєстровано слухачів у UserTracker: ${UserTracker.getListenersCount()}")
+        // Підписка на оновлення секунд таймера
+        viewModel.timerLiveData.observe(this) { seconds ->
+            binding.tvTimer.text = "$seconds с"
+        }
 
-        val btnOpenSecond: Button = findViewById(R.id.btnOpenSecond)
-        btnOpenSecond.setOnClickListener {
-            startActivity(Intent(this, SecondActivity::class.java))
+        // Підписка на стан роботи таймера (блокування кнопки Старт під час відліку)
+        viewModel.isTimerRunning.observe(this) { isRunning ->
+            binding.btnStart.isEnabled = !isRunning
+        }
+
+        binding.btnStart.setOnClickListener {
+            val inputSeconds = binding.etSeconds.text.toString().trim().toLongOrNull()
+            val duration = if (inputSeconds != null && inputSeconds > 0L) {
+                inputSeconds
+            } else {
+                TimerModel.DEFAULT_DURATION_SECONDS
+            }
+            viewModel.startTimer(duration)
+        }
+
+        binding.btnReset.setOnClickListener {
+            viewModel.resetTimer()
         }
     }
 }
