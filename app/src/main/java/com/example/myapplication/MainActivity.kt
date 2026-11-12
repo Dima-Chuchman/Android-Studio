@@ -1,82 +1,178 @@
 package com.example.myapplication
 
 import android.os.Bundle
-import android.util.Log
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.myapplication.databinding.ActivityMainBinding
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 class MainActivity : AppCompatActivity() {
 
-    private val tag = "CalculatorLog"
+    private lateinit var binding: ActivityMainBinding
 
-    private lateinit var etFirstNumber: EditText
-    private lateinit var etSecondNumber: EditText
-    private lateinit var tvResult: TextView
+    private var firstOperand: Double? = null
+    private var pendingOperation: String? = null
+    private var isNewInput: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        etFirstNumber = findViewById(R.id.etFirstNumber)
-        etSecondNumber = findViewById(R.id.etSecondNumber)
-        tvResult = findViewById(R.id.tvResult)
+        val digitButtons = listOf(
+            binding.btn0, binding.btn1, binding.btn2, binding.btn3, binding.btn4,
+            binding.btn5, binding.btn6, binding.btn7, binding.btn8, binding.btn9
+        )
 
-        val btnAdd: Button = findViewById(R.id.btnAdd)
-        val btnSubtract: Button = findViewById(R.id.btnSubtract)
-        val btnMultiply: Button = findViewById(R.id.btnMultiply)
-        val btnDivide: Button = findViewById(R.id.btnDivide)
-        val btnClear: Button = findViewById(R.id.btnClear)
-
-        btnAdd.setOnClickListener { performOperation("+") }
-        btnSubtract.setOnClickListener { performOperation("-") }
-        btnMultiply.setOnClickListener { performOperation("*") }
-        btnDivide.setOnClickListener { performOperation("/") }
-
-        btnClear.setOnClickListener {
-            etFirstNumber.text.clear()
-            etSecondNumber.text.clear()
-            tvResult.text = "Результат:"
-            Log.d(tag, "Поля вводу очищено")
-        }
-    }
-
-    private fun performOperation(operator: String) {
-        val num1Str = etFirstNumber.text.toString()
-        val num2Str = etSecondNumber.text.toString()
-
-        if (num1Str.isEmpty() || num2Str.isEmpty()) {
-            tvResult.text = "Будь ласка, введіть обидва числа"
-            Log.w(tag, "Спроба обчислення з порожніми полями")
-            return
-        }
-
-        val num1 = num1Str.toDouble()
-        val num2 = num2Str.toDouble()
-        var result = 0.0
-
-        when (operator) {
-            "+" -> result = num1 + num2
-            "-" -> result = num1 - num2
-            "*" -> result = num1 * num2
-            "/" -> {
-                if (num2 == 0.0) {
-                    tvResult.text = "Помилка: ділення на нуль неможливе!"
-                    Log.w(tag, "Спроба ділення на нуль (число 1: $num1)")
-                    return
-                }
-                result = num1 / num2
+        for (button in digitButtons) {
+            button.setOnClickListener {
+                onDigitClick(button.text.toString())
             }
         }
 
-        Log.d(tag, "Виконано операцію: $num1 $operator $num2 = $result")
+        binding.btnDot.setOnClickListener { onDotClick() }
+        binding.btnBackspace.setOnClickListener { onBackspaceClick() }
+        binding.btnClear.setOnClickListener { clearAll() }
 
-        val formattedResult = if (result % 1.0 == 0.0) {
-            result.toLong().toString()
-        } else {
-            result.toString()
+        binding.btnAdd.setOnClickListener { onOperatorClick("+") }
+        binding.btnSubtract.setOnClickListener { onOperatorClick("-") }
+        binding.btnMultiply.setOnClickListener { onOperatorClick("*") }
+        binding.btnDivide.setOnClickListener { onOperatorClick("/") }
+
+        binding.btnEquals.setOnClickListener { onEqualsClick() }
+    }
+
+    private fun onDigitClick(digit: String) {
+        val currentText = binding.tvDisplay.text.toString()
+
+        if (currentText == "Помилка") {
+            clearAll()
         }
-        tvResult.text = "Результат: $formattedResult"
+
+        if (isNewInput) {
+            binding.tvDisplay.text = digit
+            isNewInput = false
+        } else {
+            if (currentText == "0") {
+                binding.tvDisplay.text = digit
+            } else {
+                binding.tvDisplay.text = currentText + digit
+            }
+        }
+    }
+
+    private fun onDotClick() {
+        val currentText = binding.tvDisplay.text.toString()
+
+        if (currentText == "Помилка") {
+            clearAll()
+            binding.tvDisplay.text = "0."
+            isNewInput = false
+            return
+        }
+
+        if (isNewInput) {
+            binding.tvDisplay.text = "0."
+            isNewInput = false
+        } else if (!currentText.contains(".")) {
+            binding.tvDisplay.text = "$currentText."
+        }
+    }
+
+    private fun onBackspaceClick() {
+        val currentText = binding.tvDisplay.text.toString()
+
+        if (currentText == "Помилка") {
+            clearAll()
+            return
+        }
+
+        if (!isNewInput) {
+            if (currentText.length > 1) {
+                val updated = currentText.dropLast(1)
+                if (updated == "-") {
+                    binding.tvDisplay.text = "0"
+                    isNewInput = true
+                } else {
+                    binding.tvDisplay.text = updated
+                }
+            } else {
+                binding.tvDisplay.text = "0"
+                isNewInput = true
+            }
+        }
+    }
+
+    private fun onOperatorClick(operator: String) {
+        val currentText = binding.tvDisplay.text.toString()
+        if (currentText == "Помилка") return
+
+        val currentValue = currentText.toDoubleOrNull() ?: return
+
+        if (firstOperand != null && pendingOperation != null && !isNewInput) {
+            val intermediateResult = calculate(firstOperand!!, currentValue, pendingOperation!!)
+            if (intermediateResult == null) {
+                showError()
+                return
+            }
+            binding.tvDisplay.text = formatNumber(intermediateResult)
+            firstOperand = intermediateResult
+        } else {
+            firstOperand = currentValue
+        }
+
+        pendingOperation = operator
+        isNewInput = true
+    }
+
+    private fun onEqualsClick() {
+        val currentText = binding.tvDisplay.text.toString()
+        if (currentText == "Помилка") return
+        if (firstOperand == null || pendingOperation == null) return
+
+        val secondOperand = currentText.toDoubleOrNull() ?: return
+        val result = calculate(firstOperand!!, secondOperand, pendingOperation!!)
+
+        if (result == null) {
+            showError()
+            return
+        }
+
+        binding.tvDisplay.text = formatNumber(result)
+        firstOperand = null
+        pendingOperation = null
+        isNewInput = true
+    }
+
+    private fun calculate(first: Double, second: Double, operator: String): Double? {
+        return when (operator) {
+            "+" -> first + second
+            "-" -> first - second
+            "*" -> first * second
+            "/" -> if (second == 0.0) null else first / second
+            else -> null
+        }
+    }
+
+    private fun formatNumber(value: Double): String {
+        if (value == 0.0) return "0"
+        return BigDecimal.valueOf(value)
+            .setScale(8, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+    }
+
+    private fun showError() {
+        binding.tvDisplay.text = "Помилка"
+        firstOperand = null
+        pendingOperation = null
+        isNewInput = true
+    }
+
+    private fun clearAll() {
+        binding.tvDisplay.text = "0"
+        firstOperand = null
+        pendingOperation = null
+        isNewInput = true
     }
 }
