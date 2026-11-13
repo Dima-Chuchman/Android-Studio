@@ -4,11 +4,14 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class DiceViewModel : ViewModel() {
+
+    private val diceModel = DiceModel()
 
     private val _diceValues = MutableLiveData(List(5) { 1 })
     val diceValues: LiveData<List<Int>> = _diceValues
@@ -16,60 +19,34 @@ class DiceViewModel : ViewModel() {
     private val _isRolling = MutableLiveData(false)
     val isRolling: LiveData<Boolean> = _isRolling
 
-    private val lock = Any()
-    private val currentValues = IntArray(5) { 1 }
-    private val activeThreads = Collections.synchronizedList(mutableListOf<Thread>())
+    private val _buttonText = MutableLiveData("ROLL")
+    val buttonText: LiveData<String> = _buttonText
 
-    @Volatile
-    private var isCancelled = false
+    private var rollingJob: Job? = null
 
     fun rollDice() {
-        if (_isRolling.value == true) return
+        // Якщо натиснуто RESTART під час обертання — скасовуємо поточну корутину
+        rollingJob?.cancel()
 
-        isCancelled = false
-        _isRolling.value = true
+        rollingJob = viewModelScope.launch {
+            _isRolling.value = true
+            _buttonText.value = "RESTART"
 
-        val remainingThreads = AtomicInteger(5)
-
-        for (dieIndex in 0 until 5) {
-            // Випадкова тривалість обертання для кожної кістки: 1.5 – 3.0 с
-            val iterations = (15..30).random()
-
-            val worker = thread(start = false, name = "DiceWorker-$dieIndex") {
-                try {
-                    repeat(iterations) {
-                        if (isCancelled || Thread.currentThread().isInterrupted) return@thread
-                        Thread.sleep(100L)
-
-                        val rolledFace = (1..6).random()
-                        val snapshot = synchronized(lock) {
-                            currentValues[dieIndex] = rolledFace
-                            currentValues.toList()
-                        }
-                        _diceValues.postValue(snapshot)
-                    }
-                } catch (_: InterruptedException) {
-                    // Потік коректно перервано у onCleared()
-                } finally {
-                    activeThreads.remove(Thread.currentThread())
-                    if (remainingThreads.decrementAndGet() == 0 && !isCancelled) {
-                        _isRolling.postValue(false)
-                    }
-                }
+            val finalValues = diceModel.rollAllDice { updatedFaces ->
+                _diceValues.value = updatedFaces
             }
 
-            activeThreads.add(worker)
-            worker.start()
+            // Повертаємо кнопку в стан ROLL лише якщо корутина завершилася штатно, а не через cancel()
+            if (isActive) {
+                _diceValues.value = finalValues
+                _isRolling.value = false
+                _buttonText.value = "ROLL"
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        isCancelled = true
-        synchronized(activeThreads) {
-            activeThreads.forEach { it.interrupt() }
-            activeThreads.clear()
-        }
-        Log.d("DiceViewModel", "onCleared(): усі 5 фонових потоків зупинено")
+        Log.d("DiceViewModel", "onCleared(): viewModelScope автоматично скасував усі корутини")
     }
 }

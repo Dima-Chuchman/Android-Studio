@@ -31,8 +31,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.isRolling.observe(this) { isRolling ->
-            binding.btnRoll.isEnabled = !isRolling
+        // Динамічна зміна тексту кнопки між "ROLL" та "RESTART"
+        viewModel.buttonText.observe(this) { text ->
+            binding.btnRoll.text = text
         }
 
         binding.btnRoll.setOnClickListener {
