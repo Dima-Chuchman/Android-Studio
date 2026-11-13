@@ -1,8 +1,10 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -12,28 +14,34 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val viewModel: DownloadViewModel by viewModels()
+    private val viewModel: SearchViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnDownload.setOnClickListener {
-            viewModel.startDownload()
-        }
-
-        binding.btnCancel.setOnClickListener {
-            viewModel.cancelDownload()
+        binding.etSearchQuery.doOnTextChanged { text, _, _, _ ->
+            viewModel.onQueryChanged(text?.toString().orEmpty())
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    binding.progressBar.progress = state.progress
-                    binding.tvStatus.text = state.status
-                    binding.btnDownload.isEnabled = !state.isDownloading
-                    binding.btnCancel.isEnabled = state.isDownloading
+                launch {
+                    viewModel.isLoading.collect { loading ->
+                        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.searchResults.collect { results ->
+                        val query = binding.etSearchQuery.text.toString().trim()
+                        binding.tvSearchResults.text = when {
+                            query.length < 3 -> ""
+                            results.isEmpty() -> "Нічого не знайдено"
+                            else -> results.joinToString(separator = "\n")
+                        }
+                    }
                 }
             }
         }
