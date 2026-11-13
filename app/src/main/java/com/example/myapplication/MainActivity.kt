@@ -1,54 +1,109 @@
 package com.example.myapplication
 
 import android.os.Bundle
-import androidx.activity.viewModels
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.databinding.ActivityMainBinding
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val viewModel: DiceViewModel by viewModels()
+    private var calculationJob: Job? = null
+
+    private val ceh = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Глобальне перехоплення крашу: ${throwable.message}")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val diceImageViews = listOf(
-            binding.dice1,
-            binding.dice2,
-            binding.dice3,
-            binding.dice4,
-            binding.dice5
-        )
+        setupBlock1CooperativeCancellation()
+        setupBlock2And3SupervisorIsolation()
+        setupBlock4GlobalHandler()
+        setupBonusNestedTrap()
+    }
 
-        viewModel.diceValues.observe(this) { values ->
-            values.forEachIndexed { index, dieValue ->
-                if (index < diceImageViews.size) {
-                    diceImageViews[index].setImageResource(getDiceDrawableRes(dieValue))
+    private fun setupBlock1CooperativeCancellation() {
+        binding.btnStart.setOnClickListener {
+            calculationJob?.cancel()
+
+            calculationJob = lifecycleScope.launch(Dispatchers.Default) {
+                try {
+                    for (i in 1..100) {
+                        Thread.sleep(50)
+                        ensureActive()
+                        Log.d(TAG, "Обробка: $i%")
+                    }
+                    Log.d(TAG, "Роботу успішно завершено!")
+                } catch (e: CancellationException) {
+                    Log.w(TAG, "Обробку скасовано користувачем!")
+                    throw e
                 }
             }
         }
 
-        // Динамічна зміна тексту кнопки між "ROLL" та "RESTART"
-        viewModel.buttonText.observe(this) { text ->
-            binding.btnRoll.text = text
-        }
-
-        binding.btnRoll.setOnClickListener {
-            viewModel.rollDice()
+        binding.btnCancel.setOnClickListener {
+            calculationJob?.cancel()
         }
     }
 
-    private fun getDiceDrawableRes(value: Int): Int {
-        return when (value) {
-            1 -> R.drawable.dice_1
-            2 -> R.drawable.dice_2
-            3 -> R.drawable.dice_3
-            4 -> R.drawable.dice_4
-            5 -> R.drawable.dice_5
-            else -> R.drawable.dice_6
+    private fun setupBlock2And3SupervisorIsolation() {
+        binding.btnTestCrash.setOnClickListener {
+            lifecycleScope.launch {
+                supervisorScope {
+                    launch {
+                        try {
+                            delay(1000)
+                            throw RuntimeException("Банер не завантажився!")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Помилка завантаження банера: ${e.message}")
+                        }
+                    }
+
+                    launch {
+                        delay(2000)
+                        Log.d(TAG, "Стрічка новин завантажена")
+                    }
+                }
+            }
         }
+    }
+
+    private fun setupBlock4GlobalHandler() {
+        binding.btnGlobalCrash.setOnClickListener {
+            val safeScope = CoroutineScope(SupervisorJob() + Dispatchers.Main + ceh)
+
+            safeScope.launch {
+                delay(500)
+                throw IllegalArgumentException("Ой!")
+            }
+        }
+    }
+
+    private fun setupBonusNestedTrap() {
+        binding.btnNestedTrap.setOnClickListener {
+            lifecycleScope.launch {
+                launch(ceh) {
+                    throw RuntimeException("Вкладений краш!")
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "CoroutinesLab"
     }
 }
