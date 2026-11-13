@@ -2,31 +2,30 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:gravity="center"
     android:orientation="vertical"
     android:padding="24dp">
 
-    <EditText
-        android:id="@+id/etSearchQuery"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Введіть місто або країну (мін. 3 символи)"
-        android:inputType="text"
-        android:maxLines="1" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
+    <TextView
+        android:id="@+id/tvFibValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="16dp"
-        android:visibility="gone" />
+        android:layout_marginBottom="32dp"
+        android:text="Очікування підписки..."
+        android:textSize="22sp"
+        android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvSearchResults"
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/btnSubscribe"
+        android:layout_width="220dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:lineSpacingExtra="6dp"
-        android:textSize="18sp" />
+        android:text="Підписатися" />
+
+    <Button
+        android:id="@+id/btnCancel"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Скасувати" />
 
 </LinearLayout>
