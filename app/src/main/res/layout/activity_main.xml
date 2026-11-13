@@ -6,38 +6,46 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <Button
-        android:id="@+id/btnStart"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="1. Start (Важкі обчислення)" />
+        android:layout_marginBottom="16dp"
+        android:text="Готово до завантаження"
+        android:textSize="20sp"
+        android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btnCancel"
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="1. Cancel (Скасувати)" />
+        android:layout_marginBottom="24dp"
+        android:max="100"
+        android:progress="0" />
 
-    <Button
-        android:id="@+id/btnTestCrash"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="2–3. Test Crash / SupervisorScope" />
+        android:gravity="center"
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btnGlobalCrash"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="4. Global Crash (CEH)" />
+        <Button
+            android:id="@+id/btnDownload"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="Скачати файл" />
 
-    <Button
-        android:id="@+id/btnNestedTrap"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="⭐ Пастка вкладеності (CEH)" />
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:enabled="false"
+            android:text="Скасувати" />
+    </LinearLayout>
 
 </LinearLayout>
