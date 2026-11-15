@@ -1,173 +1,107 @@
 package com.example.myapplication
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
-
-    private val viewModel: BroadcastViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                BroadcastLogScreen(viewModel = viewModel)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BroadcastLogScreen(viewModel: BroadcastViewModel) {
-    val events by viewModel.events.collectAsStateWithLifecycle()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Журнал подій (${events.size})") },
-                actions = {
-                    if (events.isNotEmpty()) {
-                        TextButton(onClick = { viewModel.clearAll() }) {
-                            Text("Очистити все")
-                        }
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        if (events.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Очікування системних подій...\nНадішліть broadcast через ADB або змініть стан зарядки/режиму польоту.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    items = events,
-                    key = { event -> event.id }
-                ) { event ->
-                    ExpandableEventCard(
-                        event = event,
-                        onDelete = { viewModel.deleteEvent(event) },
-                        modifier = Modifier.animateItem()
-                    )
-                }
+                TimerTrackerScreen()
             }
         }
     }
 }
 
 @Composable
-fun ExpandableEventCard(
-    event: BroadcastEvent,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var isExpanded by rememberSaveable { mutableStateOf(false) }
+fun TimerTrackerScreen() {
+    val context = LocalContext.current
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .clickable { isExpanded = !isExpanded },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val intent = Intent(context, TimerForegroundService::class.java)
+            ContextCompat.startForegroundService(context, intent)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp)
+        Button(
+            onClick = {
+                val intent = Intent(context, TimerForegroundService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    ContextCompat.startForegroundService(context, intent)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = event.type,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Час: ${event.timestamp}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Text("Старт Таймер")
+        }
 
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Видалити подію",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
+        Spacer(modifier = Modifier.height(16.dp))
 
-            if (isExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = event.details,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+        OutlinedButton(
+            onClick = {
+                val intent = Intent(context, TimerForegroundService::class.java)
+                context.stopService(intent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Стоп Таймер")
         }
     }
 }
