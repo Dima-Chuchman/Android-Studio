@@ -1,18 +1,8 @@
 package com.example.myapplication
 
-import android.Manifest
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,118 +11,120 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Job
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
-    private val _timerFlow = MutableStateFlow(0)
-    private val timerFlow: StateFlow<Int> = _timerFlow.asStateFlow()
-
-    private var timerService: TimerForegroundService? = null
-    private var isBound = false
-    private var collectJob: Job? = null
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as TimerForegroundService.LocalBinder
-            val myService = binder.getService()
-            timerService = myService
-            isBound = true
-
-            collectJob?.cancel()
-            collectJob = lifecycleScope.launch {
-                myService.getTimerFlow().collect { seconds ->
-                    _timerFlow.value = seconds
-                }
-            }
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
-            timerService = null
-            collectJob?.cancel()
-        }
-    }
+    private val _syncStatus = MutableStateFlow("Очікування запуску...")
+    val syncStatus: StateFlow<String> = _syncStatus.asStateFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                BoundTimerScreen(
-                    timerFlow = timerFlow,
-                    onStopTimer = {
-                        timerService?.stopTimer()
-                        stopService(Intent(this, TimerForegroundService::class.java))
-                    }
+                NewsSyncScreen(
+                    statusFlow = syncStatus,
+                    onSyncNowClick = { startOneTimeSync() },
+                    onEnableNightSyncClick = { scheduleNightPeriodicSync() }
                 )
             }
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        val intent = Intent(this, TimerForegroundService::class.java)
-        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    private fun startOneTimeSync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val inputData = Data.Builder()
+            .putString("user_token", "abc123")
+            .build()
+
+        val oneTimeRequest = OneTimeWorkRequestBuilder<NewsSyncWorker>()
+            .setConstraints(constraints)
+            .setInputData(inputData)
+            .build()
+
+        val workManager = WorkManager.getInstance(applicationContext)
+        workManager.enqueue(oneTimeRequest)
+
+        workManager.getWorkInfoByIdLiveData(oneTimeRequest.id)
+            .observe(this) { workInfo ->
+                if (workInfo != null) {
+                    _syncStatus.value = when (workInfo.state) {
+                        WorkInfo.State.ENQUEUED -> "Очікує... (ENQUEUED)"
+                        WorkInfo.State.RUNNING -> "Виконується... (RUNNING)"
+                        WorkInfo.State.SUCCEEDED -> {
+                            val message = workInfo.outputData.getString("result") ?: "Синхронізовано"
+                            "$message (SUCCEEDED)"
+                        }
+                        WorkInfo.State.FAILED -> "Помилка синхронізації (FAILED)"
+                        WorkInfo.State.BLOCKED -> "Заблоковано умовами (BLOCKED)"
+                        WorkInfo.State.CANCELLED -> "Скасовано (CANCELLED)"
+                    }
+                }
+            }
     }
 
-    override fun onStop() {
-        super.onStop()
-        collectJob?.cancel()
-        if (isBound) {
-            unbindService(connection)
-            isBound = false
-        }
+    private fun scheduleNightPeriodicSync() {
+        val nightConstraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresCharging(true)
+            .build()
+
+        val inputData = Data.Builder()
+            .putString("user_token", "abc123")
+            .build()
+
+        val periodicRequest = PeriodicWorkRequestBuilder<NewsSyncWorker>(
+            15,
+            TimeUnit.MINUTES
+        )
+            .setConstraints(nightConstraints)
+            .setInputData(inputData)
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "night_news_sync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicRequest
+        )
+
+        _syncStatus.value = "Нічну синхронізацію заплановано (Wi-Fi + Зарядка)"
     }
 }
 
 @Composable
-fun BoundTimerScreen(
-    timerFlow: StateFlow<Int>,
-    onStopTimer: () -> Unit
+fun NewsSyncScreen(
+    statusFlow: StateFlow<String>,
+    onSyncNowClick: () -> Unit,
+    onEnableNightSyncClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val seconds by timerFlow.collectAsStateWithLifecycle()
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            val intent = Intent(context, TimerForegroundService::class.java)
-            ContextCompat.startForegroundService(context, intent)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!hasPermission) {
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
+    val statusText by statusFlow.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -141,41 +133,37 @@ fun BoundTimerScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "$seconds с",
-            fontSize = 56.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Text(
+                text = statusText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                val intent = Intent(context, TimerForegroundService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    ContextCompat.startForegroundService(context, intent)
-                }
-            },
+            onClick = onSyncNowClick,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Старт Таймер")
+            Text("Синхронізувати зараз")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = onStopTimer,
+            onClick = onEnableNightSyncClick,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Стоп Таймер")
+            Text("Увімкнути нічну синхронізацію")
         }
     }
 }
